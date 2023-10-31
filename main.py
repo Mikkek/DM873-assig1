@@ -25,7 +25,7 @@ def custom_pad(batch):
     return images_stacked, labels_stacked
 
 train_transforms = transforms.Compose([
-    transforms.Resize((255, 255)),
+    transforms.Resize((500, 500)),
     transforms.RandomHorizontalFlip(),
     transforms.RandomRotation(30),
     transforms.ToTensor(),
@@ -33,7 +33,7 @@ train_transforms = transforms.Compose([
     ])
 
 validate_transforms = transforms.Compose([
-    transforms.Resize((255, 255)),
+    transforms.Resize((500, 500)),
     transforms.RandomRotation(30),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -69,16 +69,18 @@ class CatDogClassifier(nn.Module):
             nn.MaxPool2d(2)
         )
 
-        self.fc1 = nn.Linear(64*3*3, 10)
+        self.fc1 = nn.Linear(64*7*7, 128)
         self.dropout = nn.Dropout(0.2)
-        self.fc2 = nn.Linear(10, 2)
+        self.fc2 = nn.Linear(128, 2)
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
+        print(x.shape)
         x = x.view(x.size(0), -1)
+        print(x.shape)
         x = self.relu(self.fc1(x))
         x = self.fc2(x)
 
