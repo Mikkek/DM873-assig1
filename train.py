@@ -5,6 +5,8 @@ from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 from torch.nn.functional import pad
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import numpy as np
+from scipy.optimize import curve_fit
 
 class CatDogClassifier(nn.Module):
     def __init__(self):
@@ -83,7 +85,7 @@ def validate_step(model, validate_loader, criterion, device):
     accuracy = correct / total
     return avg_loss, accuracy
 
-def train_and_validate(model, train_loader, validate_loader, optimizer, criterion, device, epochs=12):
+def train_and_validate(model, train_loader, validate_loader, optimizer, criterion, device, epochs):
     results = {
         "train_loss": [],
         "train_acc": [],
@@ -109,6 +111,40 @@ def train_and_validate(model, train_loader, validate_loader, optimizer, criterio
 
     return results
 
+def logaritmic(x, a, b, c, d):
+    return a * np.log(b * x + c) + d
+
+def plot_results(results):
+    epochs = range(1, len(results["train_loss"])+1)
+    plt.figure(figsize=(15, 5))
+
+
+    popt, _ = curve_fit(logaritmic, epochs, results["validate_acc"], maxfev=10000)
+    accuracy_approximation = logaritmic(epochs, *popt)
+
+    # plot training and validation loss
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, results["train_loss"], label="Training Loss")
+    plt.plot(epochs, results["validate_loss"], label="Validation Loss")
+    plt.title("Training & Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+
+    # plot validation accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, results["validate_acc"], label="Validation Accuracy")
+    plt.plot(epochs, accuracy_approximation, label="Validation Accuracy Approximation", linestyle='--')
+    plt.title("Validation Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
+    plt.legend()
+
+    plt.show()
+
+
+
+
 if __name__ == '__main__':
 
     train_transforms = transforms.Compose([
@@ -123,26 +159,25 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         ])
 
-    train_dataset = datasets.ImageFolder('./train', train_transforms)
+    train_dataset = datasets.ImageFolder('./data/catdog_data/train', train_transforms)
     test_dataset = datasets.ImageFolder('./data/catdog_data/test', validate_transforms)
     validate_dataset = datasets.ImageFolder('./data/catdog_data/validation', validate_transforms)
 
     print(f'Define data loaders')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
-    validate_loader = torch.utils.data.DataLoader(validate_dataset, batch_size=32)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+    validate_loader = torch.utils.data.DataLoader(validate_dataset, batch_size=64)
     print(f'done')
-
 
     model = CatDogClassifier()
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     device = torch.device("cuda")
     model = model.to(device)
     print(device)
 
-
-    results = train_and_validate(model, train_loader, validate_loader, optimizer, criterion, device, epochs=12)
+    results = train_and_validate(model, train_loader, validate_loader, optimizer, criterion, device, epochs=25)
     torch.save(model, './catdog_classifier.pth')
+
+    plot_results(results)

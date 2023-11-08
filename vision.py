@@ -13,8 +13,6 @@ use_cuda = torch.cuda.is_available()
 class RegClassSpecificImgGen():
 
     def __init__(self, model, target_class):
-        self.mean = [-0.485, -0.456, -0.406]
-        self.std = [1/0.229, 1/0.224, 1/0.225]
         self.model = model.cuda() if use_cuda else model
         self.model.eval()
         self.target_class = target_class
